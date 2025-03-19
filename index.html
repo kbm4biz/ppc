@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مخطط الحمل</title>
+  <style>
+    /* Base Styles */
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #fffbf2; /* خلفية مبهجة */
+      overflow-x: hidden;
+      position: relative;
+      min-height: 100vh;
+      direction: rtl;
+    }
+    .container {
+      max-width: 400px;
+      margin: 80px auto;
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      text-align: center;
+      position: relative;
+      z-index: 2;
+    }
+    h1 {
+      color: #ff69b4; /* لون وردي حيوي */
+    }
+    label, button {
+      font-size: 1.1em;
+      margin-top: 10px;
+    }
+    input[type="date"] {
+      font-size: 1em;
+      padding: 8px;
+      width: 100%;
+      margin: 10px 0;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #ffb6c1;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      color: #fff;
+    }
+    button:hover {
+      background-color: #ff69b4;
+    }
+    .result {
+      margin-top: 20px;
+      text-align: right;
+    }
+    .result ul {
+      list-style: none;
+      padding: 0;
+    }
+    .result li {
+      background: #ffe4e1;
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 4px;
+    }
+    .calendar-link {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #90ee90;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 5px;
+    }
+    .calendar-link:hover {
+      background-color: #32cd32;
+    }
+    /* Floating Emoji Animation */
+    .emoji {
+      position: fixed;
+      font-size: 2rem;
+      bottom: -50px;
+      z-index: 1;
+      animation: floatUp 8s infinite;
+      opacity: 0.8;
+    }
+    @keyframes floatUp {
+      0% { transform: translateX(0) translateY(0); opacity: 0.8; }
+      50% { opacity: 1; }
+      100% { transform: translateX(100px) translateY(-120vh); opacity: 0; }
+    }
+    /* Position different emojis at various horizontal positions */
+    .emoji:nth-child(1) { left: 5%; animation-delay: 0s; }
+    .emoji:nth-child(2) { left: 25%; animation-delay: 2s; }
+    .emoji:nth-child(3) { left: 50%; animation-delay: 4s; }
+    .emoji:nth-child(4) { left: 70%; animation-delay: 1s; }
+    .emoji:nth-child(5) { left: 85%; animation-delay: 3s; }
+  </style>
+</head>
+<body>
+  <!-- Floating Emojis in Background -->
+  <div class="emoji">😊</div>
+  <div class="emoji">💖</div>
+  <div class="emoji">🌟</div>
+  <div class="emoji">👶</div>
+  <div class="emoji">❤️</div>
+  
+  <div class="container">
+    <h1>مخطط الحمل</h1>
+    <p>اختر تاريخ بدء الدورة الشهرية:</p>
+    <input type="date" id="periodDate" />
+    <button onclick="calculateDates()">احسب</button>
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    // Helper function to format date for ICS (YYYYMMDD)
+    function formatDateICS(date) {
+      const year = date.getFullYear();
+      const month = ('0' + (date.getMonth() + 1)).slice(-2);
+      const day = ('0' + date.getDate()).slice(-2);
+      return `${year}${month}${day}`;
+    }
+
+    function calculateDates() {
+      const periodInput = document.getElementById('periodDate').value;
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = "";
+      
+      if (!periodInput) {
+        resultDiv.innerHTML = "<p>يرجى اختيار تاريخ صالح.</p>";
+        return;
+      }
+      
+      const periodDate = new Date(periodInput);
+      // Offsets for the desired days including the 10th day
+      const offsets = [10, 12, 14, 16, 18, 20];
+      
+      let events = [];
+      let html = "<h2>التواريخ المقترحة</h2><ul>";
+      offsets.forEach(offset => {
+        const optionDate = new Date(periodDate.getTime() + offset * 86400000);
+        // Format the date in Arabic including the full day name
+        const formattedDate = optionDate.toLocaleDateString('ar-EG', {
+          weekday: 'long', year: 'numeric', month: 'short', day: 'numeric'
+        });
+        html += `<li>اليوم ${offset}: ${formattedDate}</li>`;
+        events.push({offset, date: optionDate});
+      });
+      html += "</ul>";
+      
+      // Generate ICS file content with all events
+      let icsContent = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//PregnancyPlanner//EN\r\nCALSCALE:GREGORIAN\r\n";
+      events.forEach((event, index) => {
+        // All-day event: DTEND is the next day
+        let startDate = event.date;
+        let endDate = new Date(startDate.getTime() + 86400000);
+        let uid = `event-${event.offset}-${Date.now()}-${index}`;
+        icsContent += "BEGIN:VEVENT\r\n";
+        icsContent += "UID:" + uid + "\r\n";
+        icsContent += "DTSTAMP:" + formatDateICS(new Date()) + "\r\n";
+        icsContent += "DTSTART;VALUE=DATE:" + formatDateICS(startDate) + "\r\n";
+        icsContent += "DTEND;VALUE=DATE:" + formatDateICS(endDate) + "\r\n";
+        icsContent += "SUMMARY:اليوم " + event.offset + "\r\n";
+        icsContent += "END:VEVENT\r\n";
+      });
+      icsContent += "END:VCALENDAR";
+
+      // Create a Blob and generate a download link for the ICS file
+      const blob = new Blob([icsContent], { type: 'text/calendar' });
+      const url = URL.createObjectURL(blob);
+      
+      html += `<a class="calendar-link" href="${url}" download="pregnancy-planner.ics">إضافة إلى التقويم</a>`;
+      
+      resultDiv.innerHTML = html;
+    }
+  </script>
+</body>
+</html>
